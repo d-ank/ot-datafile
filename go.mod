@@ -1,4 +1,4 @@
-module datafile
+module ot_datafile
 
 go 1.15
 
