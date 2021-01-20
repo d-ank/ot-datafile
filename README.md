@@ -5,7 +5,7 @@ external script communication for onetap.com.
 this very simply watches for the specified datafile to be altered and decodes the hex format, matches against all JSON objects then iterates through them to build a complete base64 string which holds your data.
 
 ### Usage
-require the javascript file in your own script, save your data you want to communicate to a datafile using the `save` function and then add a hook to that datafile in your go application so that the data is continuously "streamed" over the `Reader` channel.
+require the javascript file (`datafileex.js`) in your own script, save your data you want to communicate to a datafile using the `save` function and then add a hook to that datafile in your go application so that the data is continuously "streamed" over the `Reader` channel.
 
 ### Example
 to be added.
