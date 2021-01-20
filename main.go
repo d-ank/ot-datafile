@@ -1,4 +1,4 @@
-package datafile
+package ot_datafile
 
 import (
 	"encoding/base64"
