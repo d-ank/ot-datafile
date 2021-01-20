@@ -1,4 +1,4 @@
-module ot_datafile
+module github.com/d-ank/ot_datafile
 
 go 1.15
 
