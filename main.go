@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -41,7 +40,8 @@ func Parse(str []byte) (json.RawMessage, error) {
 		if err != nil {
 			continue
 		}
-		if c.Exists("meta") { //discard the meta object
+		//discard the meta object
+		if c.Exists("meta") {
 			continue
 		}
 		id, ok := c.Path("id").Data().(string)
@@ -86,7 +86,6 @@ func Add(datafile string) (Hook, error) {
 	go func(hook Hook) {
 		lastStat, err := os.Stat(loc + `\ot\scripts\` + datafile)
 		if err != nil {
-			fmt.Println("err", err)
 			<-hook.close
 			return
 		}
@@ -110,7 +109,6 @@ func Add(datafile string) (Hook, error) {
 				}
 				json, err := Parse(data)
 				if err != nil {
-					fmt.Println("err", err)
 					continue
 				}
 				hook.Reader <- json

@@ -53,7 +53,8 @@ const Base64 = {
         return output;
     },
     _utf8_encode: function (string) {
-        string = string.replace(/\r\n/g, "\n");
+        // removes padding which could cause issues with a base64 decoder
+        string = string.replace(/\r\n/g, "");
         var utftext = "";
         for (var n = 0; n < string.length; n++) {
             var c = string.charCodeAt(n);
@@ -95,8 +96,8 @@ const Base64 = {
 };
 
 /**
-* @param cordlen the length of pieces to chop the string into
-* @returns Array all the equal-sized pieces of the string, and one optional remainder piece shorter than cordlen
+* @param cordlen the length of pieces to chop the string into.
+* @returns Array containing all the equal-sized pieces of the string, and one optional remainder piece shorter than cordlen.
 **/
 String.prototype.cordwood = function (cordlen) {
     if (cordlen === undefined || cordlen > this.length) {
@@ -111,7 +112,7 @@ String.prototype.cordwood = function (cordlen) {
 
 const DataFileEx = {
     /**
-    * @param dataFile The datafile to load.
+    * @param dataFile the datafile to load.
     * @returns JSON object from the datafile.
     **/
     Load: function (dataFile) {
@@ -144,9 +145,10 @@ const DataFileEx = {
         return JSON.parse(Base64.decode(data));
     },
     /**
-    * saves the JSON to the datafile on disk, returns true if successful.
-    * @param dataFile The datafile to save to.
-    * @param data The data to save.
+    * saves the JSON to the datafile on disk.
+    * @param dataFile the datafile to save to.
+    * @param data the data to save.
+    * @returns true or false depending on success.
     **/
     Save: function (dataFile, data) {
         if (data === undefined || dataFile === undefined) {
