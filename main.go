@@ -84,11 +84,7 @@ func Add(datafile string) (Hook, error) {
 	}
 	// pass back to the reader channel and writes to the datafile
 	go func(hook Hook) {
-		lastStat, err := os.Stat(loc + `\ot\scripts\` + datafile)
-		if err != nil {
-			<-hook.close
-			return
-		}
+		var lastTime time.Time
 		for {
 			select {
 			default:
@@ -97,11 +93,10 @@ func Add(datafile string) (Hook, error) {
 					time.Sleep(time.Millisecond * 2000)
 					continue
 				}
-				if stat.Size() == lastStat.Size() || stat.ModTime() == lastStat.ModTime() {
+				if !stat.ModTime().After(lastTime) {
+					lastTime = stat.ModTime()
 					time.Sleep(time.Millisecond * 3)
 					continue
-				} else {
-					lastStat = stat
 				}
 				data, err := ioutil.ReadFile(loc + `\ot\scripts\` + datafile)
 				if err != nil {
