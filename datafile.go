@@ -1,4 +1,4 @@
-package ot_datafile
+package otdata
 
 import (
 	"encoding/base64"
@@ -94,10 +94,10 @@ func Add(datafile string) (Hook, error) {
 					continue
 				}
 				if !stat.ModTime().After(lastTime) {
-					lastTime = stat.ModTime()
 					time.Sleep(time.Millisecond * 3)
 					continue
 				}
+				lastTime = stat.ModTime()
 				data, err := ioutil.ReadFile(loc + `\ot\scripts\` + datafile)
 				if err != nil {
 					continue
