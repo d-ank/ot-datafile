@@ -98,10 +98,14 @@ func Add(datafile string) (Hook, error) {
 					continue
 				}
 				lastTime = stat.ModTime()
-				time.Sleep(time.Microsecond * 1)
+				time.Sleep(time.Microsecond)
+				// this is awful, find a way around this (if delay is allowed just parse the error)
+			RETRY:
 				data, err := ioutil.ReadFile(loc + `\ot\scripts\` + datafile)
 				if err != nil {
-					continue
+					// csgo still is writing, wait 5 microseconds (ghetto)
+					time.Sleep(time.Microsecond * 4)
+					goto RETRY
 				}
 				json, err := Parse(data)
 				if err != nil {
