@@ -94,10 +94,11 @@ func Add(datafile string) (Hook, error) {
 					continue
 				}
 				if !stat.ModTime().After(lastTime) {
-					time.Sleep(time.Millisecond * 3)
+					time.Sleep(time.Millisecond / 2)
 					continue
 				}
 				lastTime = stat.ModTime()
+				time.Sleep(time.Microsecond * 1)
 				data, err := ioutil.ReadFile(loc + `\ot\scripts\` + datafile)
 				if err != nil {
 					continue
