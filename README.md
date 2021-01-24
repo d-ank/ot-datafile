@@ -8,7 +8,7 @@ this very simply watches for the specified datafile to be altered and decodes th
 require the javascript file (`datafileex.js`) in your own script, save your data you want to communicate to a datafile using the `save` function and then add a hook to that datafile in your go application so that the data is continuously "streamed" over the `Reader` channel.
 
 ### Example
-to be added.
+https://github.com/d-ank/sm-server
 
 ### Why golang?
 no reason, just what was installed on my machine and i think its easy to understand whats going on for someone to pretty easily be able to implement it in another language.
