@@ -117,30 +117,22 @@ const DataFileEx = {
     **/
     Load: function (dataFile) {
         DataFile.Load(dataFile);
-        var meta = DataFile.GetKey(dataFile, "meta")
+        var metaVal = DataFile.GetKey(dataFile, "meta")
         // forgive the code below :/
-        if (meta === undefined) {
+        if (metaVal === undefined) {
             return {};
         } else {
-            meta = JSON.parse(meta);
+            meta = JSON.parse(metaVal);
         }
-        if (!("meta" in meta)) {
+        if (!("out-max" in meta)) {
             return {};
         } else {
-            meta = meta['meta'];
+            outmax = meta['out-max'];
         }
-        if (!("max" in meta)) {
-            return {};
-        } else {
-            max = meta['max'];
-        }
-        var data = "";
+        var outdata = "";
         var id;
-        for (id = 0; id < max; id++) {
-            key = JSON.parse(DataFile.GetKey(dataFile, "out-" + id.toString()));
-            if ('v' in key) {
-                data += key['v'];
-            }
+        for (id = 0; id < outmax; id++) {
+            data += DataFile.GetKey(dataFile, "out-" + id.toString())
         }
         return JSON.parse(Base64.decode(data));
     },
@@ -158,9 +150,19 @@ const DataFileEx = {
         }
         var arr = Base64.encode(JSON.stringify(data)).cordwood(250);
         for (id in arr) {
-            DataFile.SetKey(dataFile, "out-" + id.toString(), JSON.stringify({ id: "out-" + id.toString(), v: arr[id] }));
+            DataFile.SetKey(dataFile, "out-" + id.toString(), arr[id]);
         }
-        DataFile.SetKey(dataFile, "meta", JSON.stringify({ "meta": { "max": arr.length } }));
+        meta = {}
+        metaData = DataFile.GetKey(dataFile, "meta");
+        if (metaData != undefined) {
+            try {
+                meta = JSON.parse(metaData);
+            } catch (e) { }
+            meta['out-max'] = arr.length;
+        } else {
+            meta['out-max'] = arr.length;
+        }
+        DataFile.SetKey(dataFile, "meta", JSON.stringify(meta));
         DataFile.Save(dataFile);
         return true;
     }
