@@ -93,7 +93,7 @@ func getKeyValue(keys []string, name string) (string, error) {
 }
 
 // Write handles writing to a datafile, it is structurally the same as with the javascript library however it cant write to the out segment, instead it writes to the in segment
-func (hook Hook) Write(file string, json json.RawMessage) error {
+func (hook *Hook) Write(file string, json json.RawMessage) error {
 	/*
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
@@ -175,14 +175,14 @@ func Parse(str []byte) (json.RawMessage, error) {
 }
 
 // Add takes in a datafile in the ot/scripts subfolder and returns a Hook
-func Add(datafile string) (Hook, error) {
+func Add(datafile string) (*Hook, error) {
 	hook := Hook{
 		Name:   datafile,
 		Reader: make(chan json.RawMessage),
 		close:  make(chan struct{}),
 	}
 	// pass back to the reader channel and writes to the datafile
-	go func(hook Hook) {
+	go func(hook *Hook) {
 		var lastTime time.Time
 		scriptLocation, err := getScriptLocation()
 		if err != nil {
@@ -228,11 +228,11 @@ func Add(datafile string) (Hook, error) {
 				return
 			}
 		}
-	}(hook)
-	return hook, nil
+	}(&hook)
+	return &hook, nil
 }
 
 // Close the hook on the datafile
-func (hook Hook) Close() {
+func (hook *Hook) Close() {
 	<-hook.close
 }
