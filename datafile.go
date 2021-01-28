@@ -180,6 +180,7 @@ func Add(datafile string) (*Hook, error) {
 		Name:   datafile,
 		Reader: make(chan json.RawMessage),
 		close:  make(chan struct{}),
+		mutex:  sync.Mutex{},
 	}
 	// pass back to the reader channel and writes to the datafile
 	go func(hook *Hook) {
