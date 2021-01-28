@@ -104,8 +104,8 @@ String.prototype.cordwood = function (cordlen) {
         cordlen = this.length;
     }
     var pieces = [];
-    for (i = 0; i < this.length / cordlen; i++) {
-        pieces.push(this.slice(i * cordlen, cordlen))
+    for (i = 0; i <= this.length / cordlen; i++) {
+        pieces.push(this.slice(i * cordlen, i * cordlen + cordlen))
     }
     return pieces;
 };
