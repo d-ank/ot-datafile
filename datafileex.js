@@ -113,9 +113,11 @@ String.prototype.cordwood = function (cordlen) {
 const DataFileEx = {
     /**
     * @param dataFile the datafile to load.
+    * @param intake loads the intake data (bool).
     * @returns JSON object from the datafile.
     **/
-    Load: function (dataFile) {
+    Load: function (dataFile, intake) {
+        head = intake ? "in" : "out"
         DataFile.Load(dataFile);
         var metaVal = DataFile.GetKey(dataFile, "meta")
         // forgive the code below :/
@@ -124,15 +126,15 @@ const DataFileEx = {
         } else {
             meta = JSON.parse(metaVal);
         }
-        if (!("out-max" in meta)) {
+        if (!(head + "-max" in meta)) {
             return {};
         } else {
-            outmax = meta['out-max'];
+            out = meta[head + '-max'];
         }
-        var outdata = "";
+        var data = "";
         var id;
-        for (id = 0; id < outmax; id++) {
-            data += DataFile.GetKey(dataFile, "out-" + id.toString())
+        for (id = 0; id < out; id++) {
+            data += DataFile.GetKey(dataFile, head + "-" + id.toString())
         }
         return JSON.parse(Base64.decode(data));
     },

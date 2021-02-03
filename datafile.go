@@ -22,9 +22,10 @@ import (
 type Hook struct {
 	Name   string
 	Reader chan json.RawMessage
-	Writer chan json.RawMessage
 	close  chan struct{}
 	mutex  sync.Mutex
+	path   string
+	time   time.Time
 }
 
 func fnvHash(val string) string {
@@ -40,7 +41,7 @@ func cordWood(str string, cordLen int) []string {
 	}
 	var pieces []string
 	var i int
-	for i = 0; i < len(str)/250; i++ {
+	for i = 0; i <= len(str)/250; i++ {
 		pieces = append(pieces, str[i*cordLen:cordLen])
 	}
 	return pieces
@@ -56,6 +57,13 @@ func decodeValue(str string) (string, error) {
 	return string(b), nil
 }
 
+// encodesValue simply hex encodes as a well as stripping newlines
+func encodeValue(str string) string {
+	b := hex.EncodeToString([]byte(strings.Replace(str, "\n", "", -1)))
+
+	return string(b)
+}
+
 // findKey takes in a string slice and key name, returns the keys index if found
 func findKey(keys []string, name string) (int, error) {
 	for i, v := range keys {
@@ -64,7 +72,19 @@ func findKey(keys []string, name string) (int, error) {
 			return i, nil
 		}
 	}
+
 	return 0, errors.New("Unable to find index")
+}
+
+// keys is the keys you want to append the key to
+func setKey(keys []string, name, data string) []string {
+	i, err := findKey(keys, name)
+	if err != nil {
+		keys = append(keys, fnvHash(name)+encodeValue(data))
+	} else {
+		keys[i] = fnvHash(name) + encodeValue(data)
+	}
+	return keys
 }
 
 func getScriptLocation() (string, error) {
@@ -77,7 +97,8 @@ func getScriptLocation() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return loc, nil
+
+	return loc + `\ot\scripts\`, nil
 }
 
 func getKeyValue(keys []string, name string) (string, error) {
@@ -89,48 +110,51 @@ func getKeyValue(keys []string, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return dec, nil
 }
 
 // Write handles writing to a datafile, it is structurally the same as with the javascript library however it cant write to the out segment, instead it writes to the in segment
-func (hook *Hook) Write(file string, json json.RawMessage) error {
-	/*
-		data, err := ioutil.ReadFile(file)
+func (hook *Hook) Write(json json.RawMessage) error {
+	defer func() {
+		stat, _ := os.Stat(hook.path)
+		hook.time = stat.ModTime()
+	}()
+	data := cordWood(base64.RawStdEncoding.EncodeToString(json), 250)
+	file, err := os.OpenFile(hook.path, os.O_SYNC|os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	keys := make([]string, 0)
+	for scanner.Scan() {
+		keys = append(keys, scanner.Text())
+	}
+	var meta *gabs.Container
+	metaData, err := getKeyValue(keys, "meta")
+	if err == nil {
+		meta, err = gabs.ParseJSON([]byte(metaData))
 		if err != nil {
-			time.Sleep(time.Microsecond * 4)
-			data, _ = ioutil.ReadFile(file)
-		}
-		scanner := bufio.NewScanner(strings.NewReader(string(data)))
-		var keys []string
-		for scanner.Scan() {
-			keys = append(keys, scanner.Text())
-		}
-		metaData, err := getKeyValue(keys, "meta")
-		if err != nil {
-			println(err.Error())
 			return err
 		}
-		meta, err := gabs.ParseJSON([]byte(metaData))
-		if err != nil {
-			println(err.Error())
-			return err
-		}
-		enc := base64.RawStdEncoding.EncodeToString(json)
-		dataList := cordWood(enc, 250)
-		_, err = meta.Set(len(dataList), "in-max")
-		if err != nil {
-			println(err.Error())
-			return err
-		}
-		for i, v := range dataList {
-			//index, err := findKey(dataList, "in-"+strconv.Itoa(i))
-			if err != nil {
-				hash := fnvHash("in-" + strconv.Itoa(i))
-				dataList[i] = hash + enc
-			}
-
-		}
-	*/
+	} else {
+		meta = gabs.New()
+	}
+	_, err = meta.Set(len(data), "in-max")
+	if err != nil {
+		return err
+	}
+	for i, v := range data {
+		keys = setKey(keys, "in-"+strconv.Itoa(i), v)
+	}
+	keys = setKey(keys, "meta", meta.String())
+	datawriter := bufio.NewWriter(file)
+	defer datawriter.Flush()
+	for _, data := range keys {
+		println(data)
+		_, _ = datawriter.WriteString(data + "\n")
+	}
 	return nil
 }
 
@@ -171,43 +195,41 @@ func Parse(str []byte) (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return ret, nil
 }
 
 // Add takes in a datafile in the ot/scripts subfolder and returns a Hook
 func Add(datafile string) (*Hook, error) {
+	scriptLocation, err := getScriptLocation()
+	if err != nil {
+		return nil, err
+	}
 	hook := Hook{
 		Name:   datafile,
 		Reader: make(chan json.RawMessage),
 		close:  make(chan struct{}),
-		mutex:  sync.Mutex{},
+		path:   scriptLocation + datafile,
 	}
 	// pass back to the reader channel and writes to the datafile
 	go func(hook *Hook) {
-		var lastTime time.Time
-		scriptLocation, err := getScriptLocation()
-		if err != nil {
-			hook.Close()
-		}
 		for {
 			select {
 			default:
-				hook.mutex.Lock()
-				defer hook.mutex.Unlock()
-				stat, err := os.Stat(scriptLocation + `\ot\scripts\` + datafile)
+				stat, err := os.Stat(hook.path)
 				if err != nil {
 					time.Sleep(time.Millisecond * 2000)
 					continue
 				}
-				if !stat.ModTime().After(lastTime) {
+				if !stat.ModTime().After(hook.time) {
 					time.Sleep(time.Millisecond / 2)
 					continue
 				}
-				lastTime = stat.ModTime()
+				hook.time = stat.ModTime()
 				time.Sleep(time.Microsecond)
 				// this is awful, find a way around this (if delay is allowed just parse the error)
 			RETRY:
-				data, err := ioutil.ReadFile(scriptLocation + `\ot\scripts\` + datafile)
+				data, err := ioutil.ReadFile(hook.path)
 				if err != nil {
 					// csgo still is writing, wait 5 microseconds (ghetto)
 					time.Sleep(time.Microsecond * 4)
@@ -215,21 +237,18 @@ func Add(datafile string) (*Hook, error) {
 				}
 				json, err := Parse(data)
 				if err != nil {
-					println(err.Error())
+					println("parse err: " + err.Error())
 					continue
 				}
 				hook.Reader <- json
-			case data := <-hook.Writer:
-				println(data)
-				//Write(scriptLocation+`\ot\scripts\`+datafile, data)
 			case <-hook.close:
-				close(hook.Writer)
 				close(hook.Reader)
 				close(hook.close)
 				return
 			}
 		}
 	}(&hook)
+
 	return &hook, nil
 }
 
