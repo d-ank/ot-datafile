@@ -1,4 +1,4 @@
-module github.com/d-ank/otdata
+module github.com/dankope/otdata
 
 go 1.15
 
